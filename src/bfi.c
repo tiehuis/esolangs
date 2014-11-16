@@ -83,9 +83,10 @@ int main(int argc, char **argv)
     fl = ftell(fd);
     fseek(fd, 0, SEEK_SET);
     p = malloc(fl);
-    fread(p, fl, 1, fd);
+    if(fread(p, fl, 1, fd)); /* Unused return values, great */
     fclose(fd);
 
+    
     np = generate(p, fl);
     TCCState *s = tcc_new();
     tcc_set_output_type(s, TCC_OUTPUT_MEMORY);
