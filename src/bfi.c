@@ -44,7 +44,7 @@ char* generate(char *in, const int is)
         case '-':
             while (i < is && (in[i] == '+' || in[i] == '-'))
                 jump += in[i++] == '+' ? 1 : -1;
-            if (i < is && (in[i] != '<' || in[i] != '>')) 
+            if (i < is && (in[i] != '+' || in[i] != '-')) 
                 i--;
 
             snprintf(tbuf, 32, "*ptr+=%d;", jump);
