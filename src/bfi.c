@@ -86,7 +86,6 @@ int main(int argc, char **argv)
     if(fread(p, fl, 1, fd)); /* Unused return values, great */
     fclose(fd);
 
-    
     np = generate(p, fl);
     TCCState *s = tcc_new();
     tcc_set_output_type(s, TCC_OUTPUT_MEMORY);

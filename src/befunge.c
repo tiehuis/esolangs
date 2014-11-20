@@ -2,6 +2,12 @@
 #include <stdlib.h>
 #include <time.h>
 
+#define fatal(msg)\
+    do {\
+        fprintf(stderr, "%s\n", msg);\
+        abort();\
+    } while (0)
+
 #define array(p,x,y,w) p[((y) * (w) + (x))]
 
 /* Directional movement */
@@ -17,8 +23,8 @@ struct fungespace {
     int x;   /* Current x position */
     int y;   /* Current y position */
     int d;   /* Current direction */
-    int h;   /* The height of the space we are in */
     int w;   /* The width of the space we are in */
+    int h;   /* The height of the space we are in */
     int dim; /* The dimension of the given fungespace */
 };
 
@@ -47,25 +53,23 @@ void update_position(struct fungespace *f)
 }
 
 /* Stack operations */
-#define STACK_SIZE 512
+#define STACK_SIZE 8192
 
 static int stack[STACK_SIZE];
 static int sp = 0;
 
 inline void stack_push(int op1)
 {
-    if (sp + 1 > STACK_SIZE) {
-        abort();
-    }
+    if (sp + 1 > STACK_SIZE)
+        fatal("stack overflow");
 
     stack[sp++] = op1;
 }
 
 inline int stack_pop(void)
 {
-    if (sp - 1 < 0) {
-        abort();
-    }
+    if (sp - 1 < 0)
+        fatal("stack underflow");
 
     return stack[--sp];
 }
@@ -77,19 +81,23 @@ inline void pop2(int *a, int *b)
 }
 
 /* Program execution operations */
-int exec_funge(char *p, struct fungespace *f)
+int funge_tick(char *p, struct fungespace *f)
 {
+    static int stringmode = 0;
     /* Generic variables which may be used during switch */
     int a, b;
 
-    switch (array(p, f->x, f->y, f->w)) {
+    if (stringmode && array(p, f->x, f->y, f->w) != '"') {
+        stack_push(array(p, f->x, f->y, f->w));
+    }
+    else { switch (array(p, f->x, f->y, f->w)) {
         case '+':
             pop2(&a, &b);
             stack_push(a + b);
             break;
         case '-':
             pop2(&a, &b);
-            stack_push(a - b);
+            stack_push(b - a);
             break;
         case '*':
             pop2(&a, &b);
@@ -97,11 +105,11 @@ int exec_funge(char *p, struct fungespace *f)
             break;
         case '/':
             pop2(&a, &b);
-            stack_push(a / b);
+            stack_push(b / a);
             break;
         case '%':
             pop2(&a, &b);
-            stack_push(a % b);
+            stack_push(b % a);
             break;
         case '!':
             stack_push(!stack_pop() ? 1 : 0);
@@ -132,11 +140,7 @@ int exec_funge(char *p, struct fungespace *f)
             f->d = !stack_pop() ? DOWN : UP;
             break;
         case '"':
-            update_position(f);
-            while (array(p, f->x, f->y, f->w) != '\"') {
-                stack_push(array(p, f->x, f->y, f->w));
-                update_position(f);
-            }
+            stringmode = !stringmode;
             break;
         case ':':
             a = stack_pop();
@@ -169,11 +173,11 @@ int exec_funge(char *p, struct fungespace *f)
             array(p, b, a, f->w) = stack_pop();
             break;
         case '&':
-            b = scanf("%d", &a);
+            b = fscanf(stdin, "%d", &a);
             stack_push(a);
             break;
         case '~':
-            a = getchar();
+            a = fgetc(stdin);
             stack_push(a);
             break;
         case '@':
@@ -185,14 +189,15 @@ int exec_funge(char *p, struct fungespace *f)
         default:
             /* ignore invalid */
             break;
-    }
+
+    } /* switch */ } /* else */
 
     return 0;
 }
 
 /* Attempt to load an arbitary sized funge program, dealing properly with 
  * whitespace and size constraints */
-char* load_funge(char *filename, struct fungespace *f)
+char* funge_load(char *filename, struct fungespace *f)
 {
     int i, j;
 
@@ -244,7 +249,7 @@ int main(int argc, char **argv)
     if (argc < 2) return 0;
 
     struct fungespace pos = { 0 }; pos.d = RIGHT; pos.dim = 2;
-    char *program = load_funge(argv[1], &pos);
+    char *program = funge_load(argv[1], &pos);
 
     printf("Executing following program:\n");
     int x, y; 
@@ -257,7 +262,7 @@ int main(int argc, char **argv)
 
     int end = 0;
     while (!end) {
-        end = exec_funge(program, &pos);
+        end = funge_tick(program, &pos);
         update_position(&pos);
     }
 
