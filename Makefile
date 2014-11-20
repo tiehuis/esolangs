@@ -5,7 +5,7 @@ CLIBS	 := -ltcc -ldl
 CXX      := g++
 CXXFLAGS := -std=c++11 -march=native -O2
 
-all: bfi bft
+all: befunge bfi bft malbolge
 
 bft: src/bft.cpp
 	$(CXX) $(CXXFLAGS) src/bft.cpp -o bft
@@ -13,7 +13,13 @@ bft: src/bft.cpp
 bfi: src/bfi.c
 	$(CC) $(CFLAGS) src/bfi.c -o bfi $(CLIBS)
 
+malbolge: src/malbolge.c
+	$(CC) $(CFLAGS) src/malbolge.c -o malbolge
+
+befunge: src/befunge.c
+	$(CC) $(CFLAGS) src/befunge.c -o befunge
+
 clean: 
-	@rm -f bft bfi
+	@rm -f befunge bft bfi malbolge
 
 .PHONY: all clean
