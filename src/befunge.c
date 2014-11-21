@@ -4,6 +4,7 @@
 
 #define fatal(msg)\
     do {\
+        fflush(stdout);\
         fprintf(stderr, "%s\n", msg);\
         abort();\
     } while (0)
@@ -55,8 +56,11 @@ void update_position(struct fungespace *f)
 /* Stack operations */
 #define STACK_SIZE 8192
 
-static int stack[STACK_SIZE];
-static int sp = 0;
+#define STYPE_FMT "%ld"
+typedef signed long int stype;
+
+static stype stack[STACK_SIZE];
+static size_t sp = 0;
 
 inline void stack_push(int op1)
 {
@@ -66,15 +70,18 @@ inline void stack_push(int op1)
     stack[sp++] = op1;
 }
 
-inline int stack_pop(void)
+inline stype stack_pop(void)
 {
+#ifdef CATCH_UNDERFLOW
     if (sp - 1 < 0)
         fatal("stack underflow");
-
     return stack[--sp];
+#else
+    return !sp ? 0 : stack[--sp];
+#endif
 }
 
-inline void pop2(int *a, int *b)
+inline void pop2(stype *a, stype *b)
 {
     *a = stack_pop();
     *b = stack_pop();
@@ -90,7 +97,7 @@ int funge_tick(char *p, struct fungespace *f)
     }
     else { switch (array(p, f->x, f->y, f->w)) {
         /* Generic variables which may be used during switch */
-        int a, b;
+        stype a, b;
         case '+':
             pop2(&a, &b);
             stack_push(a + b);
@@ -156,10 +163,10 @@ int funge_tick(char *p, struct fungespace *f)
             a = stack_pop();
             break;
         case '.':
-            printf("%d", stack_pop());
+            printf(STYPE_FMT " ", stack_pop());
             break;
         case ',':
-            printf("%c", stack_pop());
+            printf("%c", (char)stack_pop());
             break;
         case '#':
             update_position(f);
@@ -173,7 +180,7 @@ int funge_tick(char *p, struct fungespace *f)
             array(p, b, a, f->w) = stack_pop();
             break;
         case '&':
-            b = fscanf(stdin, "%d", &a);
+            b = fscanf(stdin, STYPE_FMT, &a);
             stack_push(a);
             break;
         case '~':
