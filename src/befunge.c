@@ -84,13 +84,13 @@ inline void pop2(int *a, int *b)
 int funge_tick(char *p, struct fungespace *f)
 {
     static int stringmode = 0;
-    /* Generic variables which may be used during switch */
-    int a, b;
 
     if (stringmode && array(p, f->x, f->y, f->w) != '"') {
         stack_push(array(p, f->x, f->y, f->w));
     }
     else { switch (array(p, f->x, f->y, f->w)) {
+        /* Generic variables which may be used during switch */
+        int a, b;
         case '+':
             pop2(&a, &b);
             stack_push(a + b);
@@ -205,11 +205,12 @@ char* funge_load(char *filename, struct fungespace *f)
     FILE *fd; long fs;
     fd = fopen(filename, "r");
     fseek(fd, 0, SEEK_END);
-    fs = ftell(fd) + 1;
+    fs = ftell(fd);
     fseek(fd, 0, SEEK_SET);
     char *rawdata = malloc(fs);
     int t_ = fread(rawdata, 1, fs, fd);
     fclose(fd);
+
 
     /* Search for longest line to construct grid */
     int len_line = 0;
@@ -224,13 +225,17 @@ char* funge_load(char *filename, struct fungespace *f)
         }
     }
 
+    if (len_line > max_line)
+        max_line = len_line;
+
     /* Use a 1-d array, but treat it as 2d */
     char *fmtdata = malloc(max_line * no_line);
     int lc = 0;
     for (i = 0, j = 0; i < fs; ++i, ++lc) {
         if (rawdata[i] == '\n') {
-            while (++lc < max_line)
+            while (lc++ < max_line) {
                 fmtdata[j++] = ' ';
+            }
             lc = -1;
         }
         else {
@@ -251,14 +256,15 @@ int main(int argc, char **argv)
     struct fungespace pos = { 0 }; pos.d = RIGHT; pos.dim = 2;
     char *program = funge_load(argv[1], &pos);
 
-    printf("Executing following program:\n");
+#ifdef DEBUG
     int x, y; 
     for (y = 0; y < pos.h; ++y) {
         for (x = 0; x < pos.w; ++x)
             printf("%c", array(program, x, y, pos.w));
-        printf("\n");
+        printf("[EOL]\n");
     }
     printf("\n");
+#endif
 
     int end = 0;
     while (!end) {
@@ -266,6 +272,7 @@ int main(int argc, char **argv)
         update_position(&pos);
     }
 
+    fflush(stdout);
     free(program);
     return 0;
 }
