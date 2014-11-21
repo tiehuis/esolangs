@@ -32,7 +32,7 @@ struct fungespace {
 int random_direction(struct fungespace *f)
 {
     static int seeded = 0;
-    if (!seeded) srand(time(NULL));
+    if (!seeded) { srand(time(NULL)); seeded = 1; }
     f->d = rand() & ((1 << f->dim) - 1);
 }
 
