@@ -23,29 +23,33 @@
 struct fungespace {
     int x;   /* Current x position */
     int y;   /* Current y position */
-    int d;   /* Current direction */
+    int dx;  /* Current x delta */
+    int dy;  /* Current y delta */
     int w;   /* The width of the space we are in */
     int h;   /* The height of the space we are in */
     int dim; /* The dimension of the given fungespace */
 };
 
 /* Alter the passed fungespace to a random direction */
-int random_direction(struct fungespace *f)
+void random_direction(struct fungespace *f)
 {
     static int seeded = 0;
     if (!seeded) { srand(time(NULL)); seeded = 1; }
-    f->d = rand() & ((1 << f->dim) - 1);
+
+    f->dx = f->dy = 0;
+    switch (rand() & ((1 << f->dim) - 1)) {
+        case RIGHT: f->dx =  1; break;
+        case UP:    f->dy = -1; break;
+        case DOWN:  f->dy =  1; break;
+        case LEFT:  f->dx = -1; break;
+    }
 }
 
 /* Move the instruction pointer to it's next location in space */
 void update_position(struct fungespace *f)
 {
-    switch (f->d) {
-        case UP:    f->y -= 1; break;
-        case RIGHT: f->x += 1; break;
-        case DOWN:  f->y += 1; break;
-        case LEFT:  f->x -= 1; break;
-    }
+    f->x += f->dx;
+    f->y += f->dy;
 
          if (f->y == f->h) f->y = 0;
     else if (f->x == f->w) f->x = 0;
@@ -126,25 +130,31 @@ int funge_tick(char *p, struct fungespace *f)
             stack_push(b > a ? 1 : 0);
             break;
         case '>':
-            f->d = RIGHT;
+            f->dx = f->dy = 0;
+            f->dx = 1;
             break;
         case '<':
-            f->d = LEFT;
+            f->dx = f->dy = 0;
+            f->dx = -1;
             break;
         case '^':
-            f->d = UP;
+            f->dx = f->dy = 0;
+            f->dy = -1;
             break;
         case 'v':
-            f->d = DOWN;
+            f->dx = f->dy = 0;
+            f->dy = 1;
             break;
         case '?':
             random_direction(f);
             break;
         case '_':
-            f->d = !stack_pop() ? RIGHT : LEFT;
+            f->dx = f->dy = 0;
+            f->dx = !stack_pop() ? 1 : -1;
             break;
         case '|':
-            f->d = !stack_pop() ? DOWN : UP;
+            f->dx = f->dy = 0;
+            f->dy = !stack_pop() ? 1 : -1;
             break;
         case '"':
             stringmode = !stringmode;
@@ -207,17 +217,18 @@ int funge_tick(char *p, struct fungespace *f)
 char* funge_load(char *filename, struct fungespace *f)
 {
     int i, j;
+    FILE *fd;
+    char *rawdata;
+    long fs;
 
     /* Read entire file */
-    FILE *fd; long fs;
     fd = fopen(filename, "r");
     fseek(fd, 0, SEEK_END);
     fs = ftell(fd);
     fseek(fd, 0, SEEK_SET);
-    char *rawdata = malloc(fs);
-    int t_ = fread(rawdata, 1, fs, fd);
+    rawdata = malloc(fs);
+    /* Unused */ i = fread(rawdata, 1, fs, fd);
     fclose(fd);
-
 
     /* Search for longest line to construct grid */
     int len_line = 0;
@@ -260,7 +271,7 @@ int main(int argc, char **argv)
 {
     if (argc < 2) return 0;
 
-    struct fungespace pos = { 0 }; pos.d = RIGHT; pos.dim = 2;
+    struct fungespace pos = { 0 }; pos.dx = 1; pos.dim = 2;
     char *program = funge_load(argv[1], &pos);
 
 #ifdef DEBUG
